@@ -15,4 +15,5 @@ public:
   LeituraDHT ler();
 private:
   DHT _dht;
+  bool _iniciado;
 };

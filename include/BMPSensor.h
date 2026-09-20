@@ -14,4 +14,5 @@ public:
   LeituraBMP ler();
 private:
   Adafruit_BMP085_Unified _bmp;
+  bool _disponivel;
 };

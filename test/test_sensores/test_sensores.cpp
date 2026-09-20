@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <Wire.h>
 #include <unity.h>
 #include "DHTSensor.h"
 #include "BMPSensor.h"
@@ -16,6 +17,7 @@ BMPSensor sensorBMPTest(BMP_SENSOR_ID);
 MQ135Sensor sensorMQTest(PIN_MQ135);
 
 void setUp() {
+  Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL);
   sensorDHTTest.iniciar();
   sensorBMPTest.iniciar();
   sensorMQTest.iniciar();
