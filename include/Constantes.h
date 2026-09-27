@@ -19,6 +19,7 @@ constexpr int ADC_VALOR_MINIMO = 0;
 constexpr int ADC_VALOR_MAXIMO = 4095;
 constexpr int ADC_QUANTIDADE_AMOSTRAS = 8;
 constexpr int ADC_VARIACAO_MAXIMA_VALIDO = 300;
+constexpr bool DEBUG_MQ135 = false;
 
 // Limiares MQ-135 (percentual)
 constexpr float MQ_LIMIAR_BOA = 35.0f;

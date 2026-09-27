@@ -22,21 +22,55 @@ EstatisticasADC coletarAmostrasADC(int pino) {
   int maiorLeitura = ADC_VALOR_MINIMO;
   long somaLeituras = 0;
 
+  if (DEBUG_MQ135) {
+    Serial.printf("[MQ135][ADC] Iniciando coleta: pino=%d, amostras=%d\n",
+                  pino, ADC_QUANTIDADE_AMOSTRAS);
+  }
+
   for (int indice = 0; indice < ADC_QUANTIDADE_AMOSTRAS; indice++) {
     const int leituraAtual = analogRead(pino);
     somaLeituras += leituraAtual;
     menorLeitura = min(menorLeitura, leituraAtual);
     maiorLeitura = max(maiorLeitura, leituraAtual);
+
+    if (DEBUG_MQ135) {
+      Serial.printf(
+          "[MQ135][ADC] Amostra %d/%d: raw=%d, soma=%ld, menor=%d, maior=%d, "
+          "variacao=%d\n",
+          indice + 1, ADC_QUANTIDADE_AMOSTRAS, leituraAtual, somaLeituras,
+          menorLeitura, maiorLeitura, maiorLeitura - menorLeitura);
+    }
   }
 
-  return {somaLeituras / ADC_QUANTIDADE_AMOSTRAS, menorLeitura,
-          maiorLeitura};
+  const EstatisticasADC estatisticas = {
+      somaLeituras / ADC_QUANTIDADE_AMOSTRAS, menorLeitura, maiorLeitura};
+
+  if (DEBUG_MQ135) {
+    Serial.printf(
+        "[MQ135][ADC] Resultado: media=%d, menor=%d, maior=%d, variacao=%d, "
+        "soma=%ld\n",
+        estatisticas.media, estatisticas.menor, estatisticas.maior,
+        estatisticas.maior - estatisticas.menor, somaLeituras);
+  }
+
+  return estatisticas;
 }
 
 bool leituraADCValida(const EstatisticasADC& estatisticas) {
-  return estatisticas.media > ADC_VALOR_MINIMO &&
-         estatisticas.media < ADC_VALOR_MAXIMO &&
-         estatisticas.maior - estatisticas.menor <= ADC_VARIACAO_MAXIMA_VALIDO;
+  const bool mediaValida = estatisticas.media > ADC_VALOR_MINIMO &&
+                           estatisticas.media < ADC_VALOR_MAXIMO;
+  const int variacao = estatisticas.maior - estatisticas.menor;
+  const bool variacaoValida = variacao <= ADC_VARIACAO_MAXIMA_VALIDO;
+
+  if (DEBUG_MQ135) {
+    Serial.printf(
+        "[MQ135][VALIDACAO] media=%d (%s), variacao=%d (limite=%d, %s)\n",
+        estatisticas.media, mediaValida ? "valida" : "invalida", variacao,
+        ADC_VARIACAO_MAXIMA_VALIDO,
+        variacaoValida ? "valida" : "invalida");
+  }
+
+  return mediaValida && variacaoValida;
 }
 
 float converterParaPercentual(int leituraADC) {
@@ -89,6 +123,9 @@ LeituraMQ MQ135Sensor::ler() {
   LeituraMQ leitura = criarLeituraInicial();
 
   if (sensorAindaAquecendo(_iniciado, _momentoInicio)) {
+    if (DEBUG_MQ135) {
+      Serial.println("[MQ135][ESTADO] Sensor ainda aquecendo; coleta ignorada.");
+    }
     leitura.qualidade = QualidadeAr::Aquecendo;
     return leitura;
   }
@@ -96,11 +133,20 @@ LeituraMQ MQ135Sensor::ler() {
   const EstatisticasADC estatisticas = coletarAmostrasADC(_pino);
   leitura.raw = estatisticas.media;
   if (!leituraADCValida(estatisticas)) {
+    if (DEBUG_MQ135) {
+      Serial.println("[MQ135][RESULTADO] Leitura invalida; percentual nao calculado.");
+    }
     return leitura;
   }
 
   leitura.percentual = converterParaPercentual(leitura.raw);
   leitura.qualidade = classificarQualidadeAr(leitura.percentual);
+
+  if (DEBUG_MQ135) {
+    Serial.printf("[MQ135][RESULTADO] raw=%d -> percentual=%.2f -> qualidade=%s\n",
+                  leitura.raw, leitura.percentual,
+                  qualidadeArParaTexto(leitura.qualidade));
+  }
 
   return leitura;
 }
